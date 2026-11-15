@@ -1,9 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
   collection, doc, getDocFromServer, getDocsFromServer, query, where,
 } from "firebase/firestore";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { PrimaryButton } from "../../../components/ui";
 import { colors, fonts } from "../../../constants/theme";
@@ -27,6 +27,20 @@ export default function DateTime() {
   const [attempt, setAttempt] = useState(0); // bumped by "Try again" to reload
 
   const day = days[dayIndex];
+
+  // Coming back to this screen (e.g. after "Pick another time") → reload the free times
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false; // the first load is already handled by the effects below
+        return;
+      }
+      setTaken(null);
+      setTime(null);
+      setAttempt((n) => n + 1);
+    }, [])
+  );
 
   // Load the chosen service (we need its length to know which times fit)
   useEffect(() => {
@@ -69,6 +83,10 @@ export default function DateTime() {
   };
 
   const retry = () => {
+    if (!serviceId) {
+      router.replace("/book/service"); // nothing to retry without a service, so start again
+      return;
+    }
     setError(false);
     setTaken(null);
     setAttempt((n) => n + 1);

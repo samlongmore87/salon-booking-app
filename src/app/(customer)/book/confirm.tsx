@@ -265,4 +265,5 @@ const styles = StyleSheet.create({
   takenBox: { gap: 12, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.grey300 },
   takenText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.black },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  infoText: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.grey600 },
 });

@@ -2,7 +2,7 @@
 // All times are "minutes after midnight", e.g. 8:30 = 510.
 
 export const SLOT_MIN = 30; // appointments can start every 30 minutes
-export const DAYS_AHEAD = 14; // how far ahead customers can book
+export const DAYS_AHEAD = 14; // how many open days customers can book ahead
 export const MIN_NOTICE_MIN = 60; // no bookings less than an hour from now
 export const STYLIST_ID = "main"; // one stylist for now; ready for more later
 
@@ -74,7 +74,8 @@ export function availableStarts(
 // The next DAYS_AHEAD days the salon is open (today is skipped once it's too late to book)
 export function bookableDays(now: Date = new Date()): Date[] {
   const days: Date[] = [];
-  for (let i = 0; i < DAYS_AHEAD; i++) {
+  // Keep going until we have DAYS_AHEAD open days (the i limit is just a safety net)
+  for (let i = 0; days.length < DAYS_AHEAD && i < DAYS_AHEAD * 2; i++) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
     const hours = OPENING_HOURS[d.getDay()];
     if (!hours) continue;
@@ -86,6 +87,7 @@ export function bookableDays(now: Date = new Date()): Date[] {
   }
   return days;
 }
+
 const LONG_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const LONG_MONTHS = [
   "January", "February", "March", "April", "May", "June",
