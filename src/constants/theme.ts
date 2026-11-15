@@ -6,6 +6,7 @@ export const colors = {
   grey300: "#E2E2E2", // borders
   grey400: "#BDBDBD",
   grey600: "#5E5E5E", // secondary text
+  error: "#D93025", // error messages
 };
 
 export const fonts = {

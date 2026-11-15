@@ -1,4 +1,6 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getApp, getApps, initializeApp } from "firebase/app";
+import { type Auth, getAuth, getReactNativePersistence, initializeAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -13,3 +15,15 @@ const firebaseConfig = {
 // Reuse the app if it already exists (stops errors when the app reloads)
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+
+// AsyncStorage keeps the user logged in after the app is closed
+function createAuth(): Auth {
+  try {
+    return initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
+  } catch {
+    // Already initialised (happens on hot reload)
+    return getAuth(app);
+  }
+}
+
+export const auth = createAuth();

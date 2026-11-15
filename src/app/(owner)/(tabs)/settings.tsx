@@ -1,5 +1,6 @@
 import { Placeholder } from "../../../components/placeholder";
+import { logOut } from "../../../lib/auth-context";
 
 export default function Settings() {
-  return <Placeholder title="Settings" links={[{ label: "Log out", href: "/login", replace: true }]} />;
+  return <Placeholder title="Settings" actions={[{ label: "Log out", onPress: logOut }]} />;
 }

@@ -1,5 +1,8 @@
 import { Placeholder } from "../../../components/placeholder";
+import { useAuth } from "../../../lib/auth-context";
 
 export default function Home() {
-  return <Placeholder title="Hi there" links={[{ label: "Book now", href: "/book/service" }]} />;
+  const { profile } = useAuth();
+  const firstName = profile?.name.split(" ")[0] ?? "there";
+  return <Placeholder title={`Hi ${firstName}`} links={[{ label: "Book now", href: "/book/service" }]} />;
 }
