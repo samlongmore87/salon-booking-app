@@ -12,5 +12,10 @@ export default function CustomerLayout() {
   if (!profile) return <Redirect href="/login" />;
   if (profile.role === "owner") return <Redirect href="/today" />;
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      {/* No swiping back into Confirm after booking (stops accidental double bookings) */}
+      <Stack.Screen name="book/confirmed" options={{ gestureEnabled: false }} />
+    </Stack>
+  );
 }

@@ -47,7 +47,17 @@ export function PrimaryButton({ title, onPress, loading, disabled }: ButtonProps
     </Pressable>
   );
 }
-
+export function SecondaryButton({ title, onPress, disabled }: Omit<ButtonProps, "loading">) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [styles.secondary, (pressed || disabled) && styles.dim]}
+    >
+      <Text style={styles.secondaryText}>{title}</Text>
+    </Pressable>
+  );
+}
 export function ErrorText({ message }: { message: string | null }) {
   if (!message) return null;
   return <Text style={styles.error}>{message}</Text>;
@@ -92,6 +102,14 @@ const styles = StyleSheet.create({
   },
   dim: { opacity: 0.7 },
   buttonText: { fontFamily: fonts.semibold, fontSize: 17, color: colors.white },
+    secondary: {
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: colors.grey100,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryText: { fontFamily: fonts.semibold, fontSize: 17, color: colors.black },
   error: { fontFamily: fonts.medium, fontSize: 14, color: colors.error },
   loading: {
     flex: 1,
