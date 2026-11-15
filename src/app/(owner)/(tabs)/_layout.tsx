@@ -15,15 +15,24 @@ export default function OwnerTabs() {
     >
       <Tabs.Screen
         name="today"
-        options={{ title: "Today", tabBarIcon: ({ color, size }) => <Ionicons name="list-outline" color={color as string} size={size} /> }}
+        options={{
+          title: "Today",
+          tabBarIcon: ({ color, size }) => <Ionicons name="list-outline" color={color as string} size={size} />,
+        }}
       />
       <Tabs.Screen
         name="schedule"
-        options={{ title: "Schedule", tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" color={color as string} size={size} /> }}
+        options={{
+          title: "Schedule",
+          tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" color={color as string} size={size} />,
+        }}
       />
       <Tabs.Screen
         name="settings"
-        options={{ title: "Settings", tabBarIcon: ({ color, size }) => <Ionicons name="options-outline" color={color as string} size={size} /> }}
+        options={{
+          title: "Settings",
+          tabBarIcon: ({ color, size }) => <Ionicons name="options-outline" color={color as string} size={size} />,
+        }}
       />
     </Tabs>
   );
