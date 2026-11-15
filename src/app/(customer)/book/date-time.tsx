@@ -45,15 +45,20 @@ export default function DateTime() {
   // Load the chosen service (we need its length to know which times fit)
   useEffect(() => {
     if (!serviceId) return;
+    let cancelled = false;
     getDocFromServer(doc(db, "services", serviceId))
       .then((snap) => {
+        if (cancelled) return;
         if (snap.exists()) setService(snap.data() as Service);
         else setError(true);
       })
       .catch((e) => {
         console.warn("Failed to load service", e);
-        setError(true);
+        if (!cancelled) setError(true);
       });
+    return () => {
+      cancelled = true; // ignore an old answer if the screen reloaded in the meantime
+    };
   }, [serviceId, attempt]);
 
   // Load which 30-minute slots are already booked on the selected day
