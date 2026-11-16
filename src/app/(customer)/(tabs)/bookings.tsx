@@ -1,9 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { FirebaseError } from "firebase/app";
-import {
-  collection, doc, getDocsFromServer, query, runTransaction, Timestamp, where,
-} from "firebase/firestore";
+import { doc, runTransaction } from "firebase/firestore";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
@@ -12,22 +10,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Loading, PrimaryButton } from "../../../components/ui";
 import { colors, fonts } from "../../../constants/theme";
 import { useAuth } from "../../../lib/auth-context";
+import { type Booking, fetchMyBookings, isUpcoming } from "../../../lib/bookings";
 import { db } from "../../../lib/firebase";
 import { haptic } from "../../../lib/haptics";
 import { formatShortDate, formatTime, SLOT_MIN, slotId, slotsNeeded } from "../../../lib/schedule";
-
-type Booking = {
-  id: string;
-  serviceId: string;
-  serviceName: string;
-  durationMin: number;
-  price: number;
-  stylistId: string;
-  date: string;
-  startMin: number;
-  startTime: Timestamp;
-  status: string;
-};
 
 // Free cancellation up to 2 hours before (the security rules enforce this too)
 const CANCEL_CUTOFF_MS = 2 * 60 * 60 * 1000;
@@ -52,11 +38,7 @@ export default function Bookings() {
     if (!user) return;
     setError(false);
     try {
-      // Only this customer's bookings. We sort them on the phone, so Firestore needs no extra index.
-      const snap = await getDocsFromServer(
-        query(collection(db, "bookings"), where("customerId", "==", user.uid))
-      );
-      setBookings(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) })));
+      setBookings(await fetchMyBookings(user.uid));
       setNow(Date.now());
     } catch (e) {
       console.warn("Failed to load bookings", e);
@@ -162,7 +144,7 @@ export default function Bookings() {
   if (!bookings) return <Loading />;
 
   const upcoming = bookings
-    .filter((b) => b.status === "upcoming" && b.startTime.toMillis() > now)
+    .filter((b) => isUpcoming(b, now))
     .sort((a, b) => a.startTime.toMillis() - b.startTime.toMillis()); // soonest first
   const past = bookings
     .filter((b) => !upcoming.includes(b))
