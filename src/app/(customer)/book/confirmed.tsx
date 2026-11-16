@@ -6,6 +6,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { PrimaryButton, SecondaryButton } from "../../../components/ui";
 import { colors, fonts } from "../../../constants/theme";
 import { db } from "../../../lib/firebase";
+import { haptic } from "../../../lib/haptics";
 import { formatLongDate, formatTime } from "../../../lib/schedule";
 
 type Booking = {
@@ -26,8 +27,12 @@ export default function Confirmed() {
     if (!bookingId) return;
     getDocFromServer(doc(db, "bookings", bookingId))
       .then((snap) => {
-        if (snap.exists()) setBooking(snap.data() as Booking);
-        else setFailed(true);
+        if (snap.exists()) {
+          setBooking(snap.data() as Booking);
+          haptic.success(); // the "done!" double-tap, only once the booking is confirmed saved
+        } else {
+          setFailed(true);
+        }
       })
       .catch((e) => {
         console.warn("Failed to load booking", e);
