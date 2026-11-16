@@ -105,3 +105,13 @@ export function formatLongDate(key: string) {
   const d = parseDateKey(key);
   return `${LONG_DAYS[d.getDay()]}, ${d.getDate()} ${LONG_MONTHS[d.getMonth()]}`;
 }
+
+const SHORT_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// "2026-11-22" → "Sat, 22 Nov" (or "22 Nov" without the weekday)
+export function formatShortDate(key: string, withWeekday = true) {
+  const d = parseDateKey(key);
+  const dayMonth = `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
+  return withWeekday ? `${SHORT_DAYS[d.getDay()]}, ${dayMonth}` : dayMonth;
+}
