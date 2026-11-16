@@ -33,6 +33,8 @@ const CANCEL_CUTOFF_MS = 2 * 60 * 60 * 1000;
 const NOT_UPCOMING = "not-upcoming";
 // Show the refresh spinner for at least this long, so it doesn't just flicker
 const MIN_REFRESH_MS = 600;
+// setTimeout can't wait longer than about 24 days
+const MAX_TIMEOUT_MS = 2_147_483_647;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -40,6 +42,7 @@ export default function Bookings() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets(); // space taken by the notch / status bar
   const [bookings, setBookings] = useState<Booking[] | null>(null); // null = still loading
+  const [now, setNow] = useState(() => Date.now()); // the time the screen is drawn for
   const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -53,6 +56,7 @@ export default function Bookings() {
         query(collection(db, "bookings"), where("customerId", "==", user.uid))
       );
       setBookings(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Booking, "id">) })));
+      setNow(Date.now());
     } catch (e) {
       console.warn("Failed to load bookings", e);
       setError(true);
@@ -64,6 +68,24 @@ export default function Bookings() {
     useCallback(() => {
       load();
     }, [load])
+  );
+
+  // While the tab is open, redraw at the exact moment the next booking passes its
+  // 2-hour cancel cutoff or its start time. The timer stops when you leave the tab.
+  useFocusEffect(
+    useCallback(() => {
+      if (!bookings) return;
+      const next = bookings
+        .filter((b) => b.status === "upcoming")
+        .flatMap((b) => [b.startTime.toMillis() - CANCEL_CUTOFF_MS, b.startTime.toMillis()])
+        .filter((t) => t > now)
+        .reduce((soonest, t) => Math.min(soonest, t), Infinity);
+      if (next === Infinity) return;
+
+      const delay = Math.min(next - Date.now() + 500, MAX_TIMEOUT_MS); // +0.5s so we land just after it
+      const timer = setTimeout(() => setNow(Date.now()), Math.max(delay, 0));
+      return () => clearTimeout(timer);
+    }, [bookings, now])
   );
 
   const onRefresh = async () => {
@@ -136,7 +158,6 @@ export default function Bookings() {
 
   if (!bookings) return <Loading />;
 
-  const now = Date.now();
   const upcoming = bookings
     .filter((b) => b.status === "upcoming" && b.startTime.toMillis() > now)
     .sort((a, b) => a.startTime.toMillis() - b.startTime.toMillis()); // soonest first
