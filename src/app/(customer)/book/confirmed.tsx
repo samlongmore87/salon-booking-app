@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDocFromServer } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { PrimaryButton, SecondaryButton } from "../../../components/ui";
@@ -21,10 +21,10 @@ export default function Confirmed() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [failed, setFailed] = useState(!bookingId);
 
-  // Read the saved booking back, so this screen only ever shows a booking that really exists
+  // Read the saved booking back from the server, so this screen only shows a booking that really exists
   useEffect(() => {
     if (!bookingId) return;
-    getDoc(doc(db, "bookings", bookingId))
+    getDocFromServer(doc(db, "bookings", bookingId))
       .then((snap) => {
         if (snap.exists()) setBooking(snap.data() as Booking);
         else setFailed(true);

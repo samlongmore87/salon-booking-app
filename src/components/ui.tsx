@@ -1,5 +1,5 @@
 import {
-    ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps,
+  ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps,
 } from "react-native";
 import { colors, fonts } from "../constants/theme";
 
@@ -47,6 +47,7 @@ export function PrimaryButton({ title, onPress, loading, disabled }: ButtonProps
     </Pressable>
   );
 }
+
 export function SecondaryButton({ title, onPress, disabled }: Omit<ButtonProps, "loading">) {
   return (
     <Pressable
@@ -58,6 +59,7 @@ export function SecondaryButton({ title, onPress, disabled }: Omit<ButtonProps, 
     </Pressable>
   );
 }
+
 export function ErrorText({ message }: { message: string | null }) {
   if (!message) return null;
   return <Text style={styles.error}>{message}</Text>;
@@ -102,7 +104,7 @@ const styles = StyleSheet.create({
   },
   dim: { opacity: 0.7 },
   buttonText: { fontFamily: fonts.semibold, fontSize: 17, color: colors.white },
-    secondary: {
+  secondary: {
     height: 56,
     borderRadius: 8,
     backgroundColor: colors.grey100,

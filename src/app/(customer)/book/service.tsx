@@ -1,7 +1,9 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { collection, getDocsFromServer, orderBy, query } from "firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { Loading, PrimaryButton } from "../../../components/ui";
 import { colors, fonts } from "../../../constants/theme";
 import { db } from "../../../lib/firebase";
 
@@ -42,35 +44,35 @@ export default function ChooseService() {
     load();
   }, [load]);
 
-  if (loading) {
-    return <ActivityIndicator style={{ flex: 1 }} color={colors.black} />;
-  }
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace("/home"));
+
+  if (loading) return <Loading />;
 
   if (error) {
     return (
       <View style={styles.screen}>
         <Text style={styles.title}>Couldn&apos;t load services</Text>
         <Text style={styles.message}>Check your connection and try again.</Text>
-        <Pressable
-          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-          onPress={load}
-        >
-          <Text style={styles.buttonText}>Try again</Text>
-        </Pressable>
+        <View style={styles.gap} />
+        <PrimaryButton title="Try again" onPress={load} />
       </View>
     );
   }
 
   return (
     <View style={styles.screen}>
+      <Pressable onPress={goBack} accessibilityLabel="Back" hitSlop={8} style={styles.back}>
+        <Ionicons name="arrow-back" size={24} color={colors.black} />
+      </Pressable>
+
       <Text style={styles.step}>Step 1 of 3</Text>
       <Text style={styles.title}>Choose a service</Text>
+
       <FlatList
         data={services}
         keyExtractor={(s) => s.id}
-        ListEmptyComponent={
-          <Text style={styles.message}>No services available right now.</Text>
-        }
+        contentContainerStyle={styles.list}
+        ListEmptyComponent={<Text style={styles.message}>No services available right now.</Text>}
         renderItem={({ item }) => (
           <Pressable
             style={({ pressed }) => [styles.row, pressed && styles.pressed]}
@@ -91,45 +93,13 @@ export default function ChooseService() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.white,
-    paddingTop: 72,
-    paddingHorizontal: 24,
-  },
-  step: {
-    fontFamily: fonts.medium,
-    fontSize: 14,
-    color: colors.grey600,
-  },
-  title: {
-    fontFamily: fonts.bold,
-    fontSize: 32,
-    letterSpacing: -0.8,
-    marginTop: 8,
-    marginBottom: 12,
-  },
-  message: {
-    fontFamily: fonts.regular,
-    fontSize: 16,
-    color: colors.grey600,
-  },
-  button: {
-    marginTop: 24,
-    height: 56,
-    borderRadius: 8,
-    backgroundColor: colors.black,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonText: {
-    fontFamily: fonts.semibold,
-    fontSize: 17,
-    color: colors.white,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
+  screen: { flex: 1, backgroundColor: colors.white, paddingTop: 60, paddingHorizontal: 24 },
+  back: { width: 44, height: 44, justifyContent: "center", marginLeft: -4 },
+  step: { marginTop: 4, fontFamily: fonts.medium, fontSize: 14, color: colors.grey600 },
+  title: { fontFamily: fonts.bold, fontSize: 32, letterSpacing: -0.8, marginTop: 8, marginBottom: 12 },
+  message: { fontFamily: fonts.regular, fontSize: 16, color: colors.grey600 },
+  gap: { height: 24 },
+  list: { paddingBottom: 40 },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -138,18 +108,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.grey200,
   },
-  name: {
-    fontFamily: fonts.semibold,
-    fontSize: 17,
-  },
-  meta: {
-    fontFamily: fonts.regular,
-    fontSize: 14,
-    color: colors.grey600,
-    marginTop: 4,
-  },
-  price: {
-    fontFamily: fonts.semibold,
-    fontSize: 17,
-  },
+  pressed: { opacity: 0.7 },
+  name: { fontFamily: fonts.semibold, fontSize: 17, color: colors.black },
+  meta: { fontFamily: fonts.regular, fontSize: 14, color: colors.grey600, marginTop: 4 },
+  price: { fontFamily: fonts.semibold, fontSize: 17, color: colors.black },
 });
