@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { colors, fonts } from "../../../constants/theme";
+import { haptic } from "../../../lib/haptics";
 
 export default function CustomerTabs() {
   return (
     <Tabs
+      screenListeners={{ tabPress: () => haptic.select() }} // soft tick when switching tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.black,

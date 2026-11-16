@@ -13,6 +13,7 @@ import { Loading, PrimaryButton } from "../../../components/ui";
 import { colors, fonts } from "../../../constants/theme";
 import { useAuth } from "../../../lib/auth-context";
 import { db } from "../../../lib/firebase";
+import { haptic } from "../../../lib/haptics";
 import { formatShortDate, formatTime, SLOT_MIN, slotId, slotsNeeded } from "../../../lib/schedule";
 
 type Booking = {
@@ -89,6 +90,7 @@ export default function Bookings() {
   );
 
   const onRefresh = async () => {
+    haptic.tap(); // light tap the moment the refresh starts
     setRefreshing(true);
     await Promise.all([load(), wait(MIN_REFRESH_MS)]); // the list stays pulled down until both finish
     setRefreshing(false);
@@ -113,6 +115,7 @@ export default function Bookings() {
           tx.delete(doc(db, "slots", slotId(b.date, b.startMin + i * SLOT_MIN, b.stylistId)));
         }
       });
+      haptic.tap(); // light tap once the cancel has gone through
     } catch (e) {
       if (e instanceof Error && e.message === NOT_UPCOMING) {
         Alert.alert("Booking already changed", "This booking has already been cancelled or updated.");
