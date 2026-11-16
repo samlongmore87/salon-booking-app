@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
@@ -10,21 +10,34 @@ import { useAuth } from "../../../lib/auth-context";
 import { type Booking, fetchMyBookings, isUpcoming } from "../../../lib/bookings";
 import { formatTime, openingHoursSummary, parseDateKey, SHORT_DAYS } from "../../../lib/schedule";
 
+// setTimeout can't wait longer than about 24 days
+const MAX_TIMEOUT_MS = 2_147_483_647;
+
 export default function Home() {
   const { user, profile } = useAuth();
-  const [next, setNext] = useState<Booking | null | undefined>(undefined); // undefined = loading, null = none
+  const [upcoming, setUpcoming] = useState<Booking[] | null>(null); // soonest first; null = loading
+  const [now, setNow] = useState(() => Date.now()); // the time the screen is drawn for
   const [error, setError] = useState(false);
+
+  // Only the newest load may update the screen (stops a slow, older load overwriting a newer one)
+  const latestRequest = useRef(0);
 
   const loadNext = useCallback(async () => {
     if (!user) return;
+    const requestId = ++latestRequest.current;
     setError(false);
     try {
-      const now = Date.now();
-      const upcoming = (await fetchMyBookings(user.uid))
-        .filter((b) => isUpcoming(b, now))
-        .sort((a, b) => a.startTime.toMillis() - b.startTime.toMillis());
-      setNext(upcoming[0] ?? null);
+      const all = await fetchMyBookings(user.uid);
+      if (requestId !== latestRequest.current) return; // a newer load has started; ignore this one
+      const fetchedAt = Date.now(); // read the time AFTER the fetch, so a slow load can't show a started booking
+      setUpcoming(
+        all
+          .filter((b) => isUpcoming(b, fetchedAt))
+          .sort((a, b) => a.startTime.toMillis() - b.startTime.toMillis())
+      );
+      setNow(fetchedAt);
     } catch (e) {
+      if (requestId !== latestRequest.current) return;
       console.warn("Failed to load next appointment", e);
       setError(true);
     }
@@ -35,6 +48,21 @@ export default function Home() {
     useCallback(() => {
       loadNext();
     }, [loadNext])
+  );
+
+  // undefined = still loading, null = nothing booked
+  const next =
+    upcoming === null ? undefined : (upcoming.find((b) => b.startTime.toMillis() > now) ?? null);
+
+  // While Home is open, move on to the following appointment the moment this one starts.
+  // The timer stops when you leave the tab.
+  useFocusEffect(
+    useCallback(() => {
+      if (!next) return;
+      const delay = Math.min(next.startTime.toMillis() - Date.now() + 500, MAX_TIMEOUT_MS); // +0.5s: land just after
+      const timer = setTimeout(() => setNow(Date.now()), Math.max(delay, 0));
+      return () => clearTimeout(timer);
+    }, [next])
   );
 
   const name = profile?.name ?? "";
