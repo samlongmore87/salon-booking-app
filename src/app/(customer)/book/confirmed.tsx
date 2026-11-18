@@ -5,8 +5,10 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { PrimaryButton, SecondaryButton } from "../../../components/ui";
 import { colors, fonts } from "../../../constants/theme";
+import { useAuth } from "../../../lib/auth-context";
 import { db } from "../../../lib/firebase";
 import { haptic } from "../../../lib/haptics";
+import { askToNotify, refreshReminders } from "../../../lib/reminders";
 import { formatLongDate, formatTime } from "../../../lib/schedule";
 
 type Booking = {
@@ -19,6 +21,9 @@ type Booking = {
 
 export default function Confirmed() {
   const { bookingId } = useLocalSearchParams<{ bookingId?: string }>();
+  const { user, profile } = useAuth();
+  const uid = user?.uid;
+  const remindersOn = profile?.remindersOn ?? false;
   const [booking, setBooking] = useState<Booking | null>(null);
   const [failed, setFailed] = useState(!bookingId);
 
@@ -39,6 +44,15 @@ export default function Confirmed() {
         setFailed(true);
       });
   }, [bookingId]);
+
+  // Once the booking is confirmed saved: ask to allow notifications (the phone only asks
+  // the first time), then schedule the reminder straight away
+  useEffect(() => {
+    if (!booking || !uid || !remindersOn) return;
+    askToNotify()
+      .then((allowed) => (allowed ? refreshReminders(uid, true) : undefined))
+      .catch((e) => console.warn("Couldn't set up reminders", e));
+  }, [booking, uid, remindersOn]);
 
   const viewBookings = () => router.dismissTo("/bookings");
   const done = () => router.dismissTo("/home");

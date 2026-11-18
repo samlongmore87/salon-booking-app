@@ -5,6 +5,7 @@ import {
 } from "react";
 import { Alert } from "react-native";
 import { auth, db } from "./firebase";
+import { clearReminders } from "./reminders";
 
 export type Role = "customer" | "owner";
 
@@ -49,6 +50,7 @@ async function fetchProfile(uid: string): Promise<ProfileResult> {
 
 // Shared log out for every screen. Shows a message if it fails instead of silently doing nothing.
 export async function logOut() {
+  await clearReminders(); // reminders belong to this account, so take them off the phone
   try {
     await signOut(auth);
   } catch (e) {

@@ -13,6 +13,7 @@ import { useAuth } from "../../../lib/auth-context";
 import { type Booking, fetchMyBookings, isUpcoming } from "../../../lib/bookings";
 import { db } from "../../../lib/firebase";
 import { haptic } from "../../../lib/haptics";
+import { removeReminder, syncReminders } from "../../../lib/reminders";
 import { formatShortDate, formatTime, SLOT_MIN, slotId, slotsNeeded } from "../../../lib/schedule";
 
 // Free cancellation up to 2 hours before (the security rules enforce this too)
@@ -28,7 +29,8 @@ const PAST_LIMIT = 10;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function Bookings() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const remindersOn = profile?.remindersOn ?? false;
   const insets = useSafeAreaInsets(); // space taken by the notch / status bar
   const [bookings, setBookings] = useState<Booking[] | null>(null); // null = still loading
   const [now, setNow] = useState(() => Date.now()); // the time the screen is drawn for
@@ -49,12 +51,13 @@ export default function Bookings() {
       if (requestId !== latestRequest.current) return; // a newer load has started; ignore this one
       setBookings(all);
       setNow(Date.now()); // read the time AFTER the fetch, so a slow load can't show a started booking
+      syncReminders(all, remindersOn); // keep the phone's reminders in step with the bookings
     } catch (e) {
       if (requestId !== latestRequest.current) return;
       console.warn("Failed to load bookings", e);
       setError(true);
     }
-  }, [user]);
+  }, [user, remindersOn]);
 
   // Reload every time this tab is opened (e.g. straight after making a booking)
   useFocusEffect(
@@ -107,6 +110,7 @@ export default function Bookings() {
           tx.delete(doc(db, "slots", slotId(b.date, b.startMin + i * SLOT_MIN, b.stylistId)));
         }
       });
+      removeReminder(b.id); // straight away, even if the reload below fails
       haptic.tap(); // light tap once the cancel has gone through
     } catch (e) {
       if (e instanceof Error && e.message === NOT_UPCOMING) {
