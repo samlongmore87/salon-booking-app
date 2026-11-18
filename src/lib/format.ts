@@ -1,6 +1,8 @@
 // Small text helpers shared by several screens.
 
 const SA_PREFIX = "+27";
+// An SA mobile number without the leading 0: 9 digits, starting with 6, 7 or 8 (e.g. 82 123 4567)
+const SA_MOBILE = /^[6-8]\d{8}$/;
 
 // "Lerato Mokoena" → "LM"
 export function initials(name: string) {
@@ -16,7 +18,7 @@ export function initials(name: string) {
 // Keeps digits only and drops a leading 0 (082... becomes 82...).
 export function parseSaPhone(input: string): string | null {
   const digits = input.replace(/\D/g, "").replace(/^0/, "");
-  return digits.length === 9 ? `${SA_PREFIX}${digits}` : null;
+  return SA_MOBILE.test(digits) ? `${SA_PREFIX}${digits}` : null;
 }
 
 // "+27821234567" → "82 123 4567" (the part after +27)

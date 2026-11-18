@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from "react-native";
@@ -15,6 +15,15 @@ export default function EditDetails() {
   const [phone, setPhone] = useState(profile ? localPhone(profile.phone) : "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // false once this screen closes, so a save that finishes later doesn't navigate or update it
+  const isOpen = useRef(true);
+  useEffect(() => {
+    isOpen.current = true;
+    return () => {
+      isOpen.current = false;
+    };
+  }, []);
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace("/account"));
 
@@ -32,9 +41,10 @@ export default function EditDetails() {
     try {
       await saveProfile(user.uid, { name: cleanName, phone: cleanPhone });
       await refreshProfile(); // so Home and Account show the new details straight away
-      goBack();
+      if (isOpen.current) goBack(); // the customer may already have left this screen
     } catch (e) {
       console.warn("Failed to save details", e);
+      if (!isOpen.current) return;
       setError("We couldn't save your details. Check your connection and try again.");
       setSaving(false);
     }
