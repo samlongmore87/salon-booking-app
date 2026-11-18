@@ -13,7 +13,7 @@ import { useAuth } from "../../../lib/auth-context";
 import { type Booking, fetchMyBookings, isUpcoming } from "../../../lib/bookings";
 import { db } from "../../../lib/firebase";
 import { haptic } from "../../../lib/haptics";
-import { syncReminders } from "../../../lib/reminders";
+import { removeReminder, syncReminders } from "../../../lib/reminders";
 import { formatShortDate, formatTime, SLOT_MIN, slotId, slotsNeeded } from "../../../lib/schedule";
 
 // Free cancellation up to 2 hours before (the security rules enforce this too)
@@ -51,7 +51,7 @@ export default function Bookings() {
       if (requestId !== latestRequest.current) return; // a newer load has started; ignore this one
       setBookings(all);
       setNow(Date.now()); // read the time AFTER the fetch, so a slow load can't show a started booking
-      syncReminders(all, remindersOn); // keep the phone's reminders in step (e.g. after a cancel)
+      syncReminders(all, remindersOn); // keep the phone's reminders in step with the bookings
     } catch (e) {
       if (requestId !== latestRequest.current) return;
       console.warn("Failed to load bookings", e);
@@ -110,6 +110,7 @@ export default function Bookings() {
           tx.delete(doc(db, "slots", slotId(b.date, b.startMin + i * SLOT_MIN, b.stylistId)));
         }
       });
+      removeReminder(b.id); // straight away, even if the reload below fails
       haptic.tap(); // light tap once the cancel has gone through
     } catch (e) {
       if (e instanceof Error && e.message === NOT_UPCOMING) {
@@ -125,7 +126,7 @@ export default function Bookings() {
       }
     } finally {
       setCancellingId(null);
-      load(); // always show the latest state (this also removes the cancelled booking's reminder)
+      load(); // always show the latest state
     }
   };
 

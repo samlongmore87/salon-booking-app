@@ -15,6 +15,9 @@ type Permission = Awaited<ReturnType<typeof Notifications.getPermissionsAsync>>;
 const isAllowed = (p: Permission) =>
   p.granted || p.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
 
+// Each booking's reminder has a fixed id, so it can be replaced or removed on its own
+const reminderId = (bookingId: string) => `booking-${bookingId}`;
+
 // Call once when the app starts
 export function setUpNotifications() {
   // Still show a reminder if the app happens to be open when it fires
@@ -67,7 +70,7 @@ async function applyReminders(bookings: Booking[], remindersOn: boolean) {
     if (!isUpcoming(b, now) || at.getTime() <= now) continue; // cancelled, past, or too late to remind
 
     await Notifications.scheduleNotificationAsync({
-      identifier: `booking-${b.id}`,
+      identifier: reminderId(b.id),
       content: {
         title: `Tomorrow at ${formatTime(b.startMin)}`,
         body: `${b.serviceName} at ${SALON.name}. Can't make it? Cancel in the app up to 2 hours before.`,
@@ -82,15 +85,23 @@ async function applyReminders(bookings: Booking[], remindersOn: boolean) {
   }
 }
 
-// Updates run one after another, so two screens updating at once can't mix up the list
+// Updates run one after another, so two screens updating at once can't mix up the list.
+// A failed update is logged and never stops the ones after it.
 let queue: Promise<void> = Promise.resolve();
+
+function enqueue(task: () => Promise<void>) {
+  queue = queue.then(task).catch((e) => console.warn("Failed to update reminders", e));
+  return queue;
+}
 
 // Make the phone's reminders match these bookings. Never throws.
 export function syncReminders(bookings: Booking[], remindersOn: boolean) {
-  queue = queue
-    .then(() => applyReminders(bookings, remindersOn))
-    .catch((e) => console.warn("Failed to update reminders", e));
-  return queue;
+  return enqueue(() => applyReminders(bookings, remindersOn));
+}
+
+// Remove one booking's reminder (straight after it's cancelled). Never throws.
+export function removeReminder(bookingId: string) {
+  return enqueue(() => Notifications.cancelScheduledNotificationAsync(reminderId(bookingId)));
 }
 
 // Fetch the customer's bookings, then update the reminders. Never throws.

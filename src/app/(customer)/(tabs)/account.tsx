@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   Alert, AppState, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View,
 } from "react-native";
@@ -14,16 +14,24 @@ import { formatMonthYear } from "../../../lib/schedule";
 
 export default function Account() {
   const { user, profile, refreshProfile } = useAuth();
+  const uid = user?.uid;
+  const savedRemindersOn = profile?.remindersOn ?? false;
   // The reminders value being saved right now (null = not saving), so the switch moves straight away
   const [pendingReminders, setPendingReminders] = useState<boolean | null>(null);
   // true = notifications are switched off for this app in the phone's Settings
   const [blocked, setBlocked] = useState(false);
+  const wasBlocked = useRef(false);
 
   const checkBlocked = useCallback(() => {
     notificationsBlocked()
-      .then(setBlocked)
+      .then((isBlocked) => {
+        // Just allowed again in Settings: schedule the reminders now, rather than at the next load
+        if (wasBlocked.current && !isBlocked && uid && savedRemindersOn) refreshReminders(uid, true);
+        wasBlocked.current = isBlocked;
+        setBlocked(isBlocked);
+      })
       .catch((e) => console.warn("Couldn't check notification permission", e));
-  }, []);
+  }, [uid, savedRemindersOn]);
 
   // Check when the tab opens, and again when coming back from the phone's Settings app
   useFocusEffect(
