@@ -116,6 +116,11 @@ export function formatShortDate(key: string, withWeekday = true) {
   return withWeekday ? `${SHORT_DAYS[d.getDay()]}, ${dayMonth}` : dayMonth;
 }
 
+// A Date → "Oct 2026"
+export function formatMonthYear(d: Date) {
+  return `${SHORT_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 // "Mon–Fri 08:00–17:00 · Sat 09:00–13:00", built from OPENING_HOURS so it never goes out of date
 export function openingHoursSummary() {
   const week = [1, 2, 3, 4, 5, 6, 0]; // Monday first

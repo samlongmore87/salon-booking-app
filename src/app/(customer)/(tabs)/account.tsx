@@ -5,9 +5,9 @@ import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "re
 import { Loading } from "../../../components/ui";
 import { callSalon } from "../../../constants/salon";
 import { colors, fonts } from "../../../constants/theme";
-import { logOut, type Profile, saveProfile, useAuth } from "../../../lib/auth-context";
+import { logOut, saveProfile, useAuth } from "../../../lib/auth-context";
 import { formatPhone, initials } from "../../../lib/format";
-import { SHORT_MONTHS } from "../../../lib/schedule";
+import { formatMonthYear } from "../../../lib/schedule";
 
 export default function Account() {
   const { user, profile, refreshProfile } = useAuth();
@@ -17,7 +17,7 @@ export default function Account() {
   if (!user || !profile) return <Loading />;
 
   const remindersOn = pendingReminders ?? profile.remindersOn;
-  const since = customerSince(profile);
+  const joined = profile.createdAt?.toDate(); // missing for a moment while a new profile is saving
 
   const toggleReminders = async (value: boolean) => {
     setPendingReminders(value);
@@ -44,7 +44,7 @@ export default function Account() {
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.title}>{profile.name}</Text>
-          {since ? <Text style={styles.muted}>{since}</Text> : null}
+          {joined ? <Text style={styles.muted}>Customer since {formatMonthYear(joined)}</Text> : null}
         </View>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials(profile.name)}</Text>
@@ -108,12 +108,6 @@ export default function Account() {
       </Pressable>
     </ScrollView>
   );
-}
-
-// "Customer since Oct 2026" (nothing while a brand-new profile's date is still saving)
-function customerSince(p: Profile) {
-  const d = p.createdAt?.toDate();
-  return d ? `Customer since ${SHORT_MONTHS[d.getMonth()]} ${d.getFullYear()}` : null;
 }
 
 const styles = StyleSheet.create({
