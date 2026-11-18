@@ -7,6 +7,7 @@ import { colors, fonts } from "../../../constants/theme";
 import { useAuth } from "../../../lib/auth-context";
 import { type Booking, fetchMyBookings, isUpcoming } from "../../../lib/bookings";
 import { initials } from "../../../lib/format";
+import { syncReminders } from "../../../lib/reminders";
 import { formatTime, openingHoursSummary, parseDateKey, SHORT_DAYS } from "../../../lib/schedule";
 
 // setTimeout can't wait longer than about 24 days
@@ -14,6 +15,7 @@ const MAX_TIMEOUT_MS = 2_147_483_647;
 
 export default function Home() {
   const { user, profile } = useAuth();
+  const remindersOn = profile?.remindersOn ?? false;
   const [upcoming, setUpcoming] = useState<Booking[] | null>(null); // soonest first; null = loading
   const [now, setNow] = useState(() => Date.now()); // the time the screen is drawn for
   const [error, setError] = useState(false);
@@ -35,12 +37,13 @@ export default function Home() {
           .sort((a, b) => a.startTime.toMillis() - b.startTime.toMillis())
       );
       setNow(fetchedAt);
+      syncReminders(all, remindersOn); // keep the phone's reminders in step with the bookings
     } catch (e) {
       if (requestId !== latestRequest.current) return;
       console.warn("Failed to load next appointment", e);
       setError(true);
     }
-  }, [user]);
+  }, [user, remindersOn]);
 
   // Reload every time Home is opened (e.g. after booking or cancelling)
   useFocusEffect(

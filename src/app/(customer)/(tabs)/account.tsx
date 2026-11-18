@@ -1,18 +1,40 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import {
+  Alert, AppState, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View,
+} from "react-native";
 import { Loading } from "../../../components/ui";
 import { callSalon } from "../../../constants/salon";
 import { colors, fonts } from "../../../constants/theme";
 import { logOut, saveProfile, useAuth } from "../../../lib/auth-context";
 import { formatPhone, initials } from "../../../lib/format";
+import { askToNotify, notificationsBlocked, refreshReminders } from "../../../lib/reminders";
 import { formatMonthYear } from "../../../lib/schedule";
 
 export default function Account() {
   const { user, profile, refreshProfile } = useAuth();
   // The reminders value being saved right now (null = not saving), so the switch moves straight away
   const [pendingReminders, setPendingReminders] = useState<boolean | null>(null);
+  // true = notifications are switched off for this app in the phone's Settings
+  const [blocked, setBlocked] = useState(false);
+
+  const checkBlocked = useCallback(() => {
+    notificationsBlocked()
+      .then(setBlocked)
+      .catch((e) => console.warn("Couldn't check notification permission", e));
+  }, []);
+
+  // Check when the tab opens, and again when coming back from the phone's Settings app
+  useFocusEffect(
+    useCallback(() => {
+      checkBlocked();
+      const sub = AppState.addEventListener("change", (state) => {
+        if (state === "active") checkBlocked();
+      });
+      return () => sub.remove();
+    }, [checkBlocked])
+  );
 
   if (!user || !profile) return <Loading />;
 
@@ -22,14 +44,22 @@ export default function Account() {
   const toggleReminders = async (value: boolean) => {
     setPendingReminders(value);
     try {
+      // Turning on: the phone asks for permission the first time. If refused, the note below explains.
+      if (value) await askToNotify();
       await saveProfile(user.uid, { remindersOn: value });
       await refreshProfile();
+      await refreshReminders(user.uid, value); // add or remove the reminders straight away
     } catch (e) {
       console.warn("Failed to save reminders setting", e);
       Alert.alert("Couldn't save", "Check your connection and try again.");
     } finally {
       setPendingReminders(null); // show the saved value (or flip back if saving failed)
+      checkBlocked();
     }
+  };
+
+  const openSettings = () => {
+    Linking.openSettings().catch((e) => console.warn("Couldn't open Settings", e));
   };
 
   const confirmLogOut = () => {
@@ -74,7 +104,7 @@ export default function Account() {
       </View>
 
       <Text style={styles.section}>Notifications</Text>
-      <View style={[styles.row, styles.reminderRow, styles.divider]}>
+      <View style={[styles.row, styles.reminderRow, !(remindersOn && blocked) && styles.divider]}>
         <View style={styles.text}>
           <Text style={styles.rowValue}>Appointment reminders</Text>
           <Text style={styles.rowLabel}>The day before, at 18:00</Text>
@@ -88,6 +118,16 @@ export default function Account() {
           ios_backgroundColor={colors.grey300}
         />
       </View>
+      {remindersOn && blocked ? (
+        <View style={[styles.blockedNote, styles.divider]}>
+          <Text style={styles.rowLabel}>
+            Notifications are turned off for this app, so reminders can&apos;t be shown.
+          </Text>
+          <Pressable onPress={openSettings} hitSlop={8} accessibilityRole="button">
+            <Text style={styles.link}>Open Settings</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <Text style={styles.section}>Support</Text>
       <Pressable
@@ -132,10 +172,12 @@ const styles = StyleSheet.create({
   linkRow: { minHeight: 56 },
   logOutRow: { justifyContent: "flex-start" },
   divider: { borderBottomWidth: 1, borderBottomColor: colors.grey200 },
+  blockedNote: { paddingBottom: 16, gap: 8 },
   text: { flex: 1, gap: 2 },
-  rowLabel: { fontFamily: fonts.regular, fontSize: 14, color: colors.grey600 },
+  rowLabel: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.grey600 },
   rowValue: { fontFamily: fonts.medium, fontSize: 16, color: colors.black },
   flexText: { flex: 1 },
+  link: { fontFamily: fonts.semibold, fontSize: 14, color: colors.black, textDecorationLine: "underline" },
   edit: {
     height: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: colors.grey100,
     alignItems: "center", justifyContent: "center",

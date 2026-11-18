@@ -7,8 +7,10 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { AuthProvider } from "../lib/auth-context";
+import { setUpNotifications } from "../lib/reminders";
 
 SplashScreen.preventAutoHideAsync();
+setUpNotifications();
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({

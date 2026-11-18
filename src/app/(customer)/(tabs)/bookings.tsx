@@ -13,6 +13,7 @@ import { useAuth } from "../../../lib/auth-context";
 import { type Booking, fetchMyBookings, isUpcoming } from "../../../lib/bookings";
 import { db } from "../../../lib/firebase";
 import { haptic } from "../../../lib/haptics";
+import { syncReminders } from "../../../lib/reminders";
 import { formatShortDate, formatTime, SLOT_MIN, slotId, slotsNeeded } from "../../../lib/schedule";
 
 // Free cancellation up to 2 hours before (the security rules enforce this too)
@@ -28,7 +29,8 @@ const PAST_LIMIT = 10;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function Bookings() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const remindersOn = profile?.remindersOn ?? false;
   const insets = useSafeAreaInsets(); // space taken by the notch / status bar
   const [bookings, setBookings] = useState<Booking[] | null>(null); // null = still loading
   const [now, setNow] = useState(() => Date.now()); // the time the screen is drawn for
@@ -49,12 +51,13 @@ export default function Bookings() {
       if (requestId !== latestRequest.current) return; // a newer load has started; ignore this one
       setBookings(all);
       setNow(Date.now()); // read the time AFTER the fetch, so a slow load can't show a started booking
+      syncReminders(all, remindersOn); // keep the phone's reminders in step (e.g. after a cancel)
     } catch (e) {
       if (requestId !== latestRequest.current) return;
       console.warn("Failed to load bookings", e);
       setError(true);
     }
-  }, [user]);
+  }, [user, remindersOn]);
 
   // Reload every time this tab is opened (e.g. straight after making a booking)
   useFocusEffect(
@@ -122,7 +125,7 @@ export default function Bookings() {
       }
     } finally {
       setCancellingId(null);
-      load(); // always show the latest state
+      load(); // always show the latest state (this also removes the cancelled booking's reminder)
     }
   };
 
