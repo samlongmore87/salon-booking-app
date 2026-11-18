@@ -1,7 +1,7 @@
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, runTransaction, type Timestamp } from "firebase/firestore";
 import {
-    createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode,
+  createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode,
 } from "react";
 import { Alert } from "react-native";
 import { auth, db } from "./firebase";
@@ -14,7 +14,11 @@ export type Profile = {
   phone: string;
   role: Role;
   remindersOn: boolean;
+  createdAt?: Timestamp | null; // null for a moment while a brand-new profile is saving
 };
+
+// The only fields a customer may change (the security rules allow exactly these)
+export type EditableProfile = Pick<Profile, "name" | "phone" | "remindersOn">;
 
 type AuthState = {
   user: User | null;
@@ -51,6 +55,18 @@ export async function logOut() {
     console.warn("Failed to log out", e);
     Alert.alert("Couldn't log out", "Check your connection and try again.");
   }
+}
+
+// Save changes to your own profile. A transaction fails straight away when offline,
+// instead of waiting silently until the connection comes back.
+// Call refreshProfile() afterwards so every screen shows the new details.
+export async function saveProfile(uid: string, changes: Partial<EditableProfile>) {
+  const ref = doc(db, "users", uid);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error("Profile not found");
+    tx.update(ref, changes);
+  });
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

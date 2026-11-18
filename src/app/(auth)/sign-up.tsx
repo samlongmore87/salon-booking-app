@@ -11,6 +11,7 @@ import { colors, fonts } from "../../constants/theme";
 import { useAuth } from "../../lib/auth-context";
 import { authErrorMessage } from "../../lib/auth-errors";
 import { auth, db } from "../../lib/firebase";
+import { parseSaPhone } from "../../lib/format";
 
 export default function SignUp() {
   const { refreshProfile } = useAuth();
@@ -27,12 +28,11 @@ export default function SignUp() {
     setError(null);
     const cleanName = name.trim();
     const cleanEmail = email.trim().toLowerCase();
-    // Keep digits only, and drop a leading 0 (082... becomes 82...)
-    const digits = phone.replace(/\D/g, "").replace(/^0/, "");
+    const cleanPhone = parseSaPhone(phone); // e.g. "082 123 4567" → "+27821234567"
 
     if (!cleanName) return setError("Enter your full name.");
     if (!cleanEmail.includes("@")) return setError("Enter a valid email address.");
-    if (digits.length !== 9) return setError("Enter a valid SA mobile number, e.g. 82 123 4567.");
+    if (!cleanPhone) return setError("Enter a valid SA mobile number, e.g. 82 123 4567.");
     if (password.length < 8) return setError("Password must be at least 8 characters.");
 
     setLoading(true);
@@ -42,7 +42,7 @@ export default function SignUp() {
         await setDoc(doc(db, "users", cred.user.uid), {
           name: cleanName,
           email: cleanEmail,
-          phone: `+27${digits}`,
+          phone: cleanPhone,
           role: "customer", // the security rules only allow "customer" here
           remindersOn: true,
           createdAt: serverTimestamp(),
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.white },
   screen: { flexGrow: 1, paddingTop: 60, paddingHorizontal: 24, paddingBottom: 40 },
   back: { width: 44, height: 44, justifyContent: "center", marginLeft: -4 },
-  title: { marginTop: 12, fontFamily: fonts.bold, fontSize: 32, letterSpacing: -0.8 },
+  title: { marginTop: 12, fontFamily: fonts.bold, fontSize: 32, letterSpacing: -0.8, color: colors.black },
   subtitle: { marginTop: 8, fontFamily: fonts.regular, fontSize: 16, color: colors.grey600 },
   form: { marginTop: 28, gap: 16 },
   bottom: { marginTop: 24, gap: 12 },
