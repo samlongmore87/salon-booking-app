@@ -107,7 +107,7 @@ export function formatLongDate(key: string) {
 }
 
 export const SHORT_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+export const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // "2026-11-22" → "Sat, 22 Nov" (or "22 Nov" without the weekday)
 export function formatShortDate(key: string, withWeekday = true) {

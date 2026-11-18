@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { FirebaseError } from "firebase/app";
 import { doc, runTransaction } from "firebase/firestore";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
 } from "react-native";
@@ -22,6 +22,8 @@ const NOT_UPCOMING = "not-upcoming";
 const MIN_REFRESH_MS = 600;
 // setTimeout can't wait longer than about 24 days
 const MAX_TIMEOUT_MS = 2_147_483_647;
+// How many past bookings to show before "Show all"
+const PAST_LIMIT = 10;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -33,14 +35,22 @@ export default function Bookings() {
   const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [showAllPast, setShowAllPast] = useState(false);
+
+  // Only the newest load may update the screen (stops a slow, older load overwriting a newer one)
+  const latestRequest = useRef(0);
 
   const load = useCallback(async () => {
     if (!user) return;
+    const requestId = ++latestRequest.current;
     setError(false);
     try {
-      setBookings(await fetchMyBookings(user.uid));
-      setNow(Date.now());
+      const all = await fetchMyBookings(user.uid);
+      if (requestId !== latestRequest.current) return; // a newer load has started; ignore this one
+      setBookings(all);
+      setNow(Date.now()); // read the time AFTER the fetch, so a slow load can't show a started booking
     } catch (e) {
+      if (requestId !== latestRequest.current) return;
       console.warn("Failed to load bookings", e);
       setError(true);
     }
@@ -149,6 +159,8 @@ export default function Bookings() {
   const past = bookings
     .filter((b) => !upcoming.includes(b))
     .sort((a, b) => b.startTime.toMillis() - a.startTime.toMillis()); // most recent first
+  const visiblePast = showAllPast ? past : past.slice(0, PAST_LIMIT);
+  const hiddenCount = past.length - visiblePast.length;
 
   return (
     <View style={[styles.flex, { paddingTop: insets.top }]}>
@@ -193,12 +205,12 @@ export default function Bookings() {
                     <Pressable
                       onPress={() => confirmCancel(b)}
                       disabled={cancellingId !== null}
-                      style={({ pressed }) => [styles.cancel, (pressed || isCancelling) && styles.dim]}
+                      style={({ pressed }) => [styles.pill, (pressed || isCancelling) && styles.dim]}
                     >
                       {isCancelling ? (
                         <ActivityIndicator color={colors.black} />
                       ) : (
-                        <Text style={styles.cancelText}>Cancel booking</Text>
+                        <Text style={styles.pillText}>Cancel booking</Text>
                       )}
                     </Pressable>
                   ) : (
@@ -216,8 +228,8 @@ export default function Bookings() {
         {past.length > 0 ? (
           <>
             <Text style={styles.section}>Past</Text>
-            {past.map((b, i) => (
-              <View key={b.id} style={[styles.pastRow, i < past.length - 1 && styles.divider]}>
+            {visiblePast.map((b, i) => (
+              <View key={b.id} style={[styles.pastRow, i < visiblePast.length - 1 && styles.divider]}>
                 <View style={styles.text}>
                   <Text style={styles.pastTitle}>{b.serviceName}</Text>
                   <Text style={styles.pastMeta}>
@@ -233,6 +245,15 @@ export default function Bookings() {
                 </Pressable>
               </View>
             ))}
+            {hiddenCount > 0 ? (
+              <Pressable
+                onPress={() => setShowAllPast(true)}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.pill, styles.showAll, pressed && styles.dim]}
+              >
+                <Text style={styles.pillText}>Show all ({past.length})</Text>
+              </Pressable>
+            ) : null}
           </>
         ) : null}
       </ScrollView>
@@ -267,10 +288,12 @@ const styles = StyleSheet.create({
   text: { flex: 1, gap: 4 },
   cardTitle: { fontFamily: fonts.semibold, fontSize: 17, color: colors.black },
   cardMeta: { fontFamily: fonts.regular, fontSize: 15, color: colors.grey600 },
-  cancel: {
+  // Grey pill button, shared by "Cancel booking" and "Show all"
+  pill: {
     height: 44, borderRadius: 22, backgroundColor: colors.grey100, alignItems: "center", justifyContent: "center",
   },
-  cancelText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.black },
+  pillText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.black },
+  showAll: { marginTop: 16 },
   small: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.grey600 },
   pastRow: { minHeight: 72, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   divider: { borderBottomWidth: 1, borderBottomColor: colors.grey200 },
