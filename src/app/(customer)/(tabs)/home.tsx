@@ -1,13 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import {
-  ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View,
-} from "react-native";
-import { SALON } from "../../../constants/salon";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { callSalon, SALON } from "../../../constants/salon";
 import { colors, fonts } from "../../../constants/theme";
 import { useAuth } from "../../../lib/auth-context";
 import { type Booking, fetchMyBookings, isUpcoming } from "../../../lib/bookings";
+import { initials } from "../../../lib/format";
 import { formatTime, openingHoursSummary, parseDateKey, SHORT_DAYS } from "../../../lib/schedule";
 
 // setTimeout can't wait longer than about 24 days
@@ -67,16 +66,6 @@ export default function Home() {
 
   const name = profile?.name ?? "";
   const firstName = name.split(" ")[0] || "there";
-  const initials = name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join("");
-
-  const callSalon = () => {
-    Linking.openURL(`tel:${SALON.phone}`).catch((e) => console.warn("Couldn't open the phone app", e));
-  };
 
   return (
     <ScrollView style={styles.flex} contentContainerStyle={styles.screen}>
@@ -88,7 +77,7 @@ export default function Home() {
           accessibilityLabel="Your account"
           style={({ pressed }) => [styles.avatar, pressed && styles.dim]}
         >
-          <Text style={styles.avatarText}>{initials}</Text>
+          <Text style={styles.avatarText}>{initials(name)}</Text>
         </Pressable>
       </View>
 
